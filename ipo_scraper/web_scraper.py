@@ -3,6 +3,7 @@ This module contains most code related to scraping the content of IPO guiden
 """
 
 from typing import List, Dict
+import time
 
 from selenium import webdriver
 import bs4
@@ -19,15 +20,67 @@ def get_chrome_driver_for_url(url: str) -> webdriver.Chrome:
     return driver
 
 
-def remove_ad(chrome_driver: webdriver.Chrome) -> None:
+def remove_ad(chrome_driver: webdriver.Chrome):
     """
     Closes the popup ad that appears when you first open the IPO guiden website
     :param chrome_driver: Selenium Chrome WebDriver object that navigates the website
     """
     # this xpath is hardcoded to the button with text "STÄNG X" for the ad that I encountered when making this,
     # It is a google generated ad so it might be subject to change.
-    elem = chrome_driver.find_element_by_xpath(xpath="/html/body/div[5]/div/div/div/button")
+    xpath_to_close_ad = "/html/body/div[5]/div/div/div/button"
+    click_item_at_xpath(chrome_driver=chrome_driver, xpath=xpath_to_close_ad)
+
+
+def show_all_ipos(chrome_driver: webdriver.Chrome):
+    """
+    Shows all IPOs on one page of the IPO guiden website.
+    :param chrome_driver: Selenium Chrome WebDriver object that navigates the website
+    """
+    # This is the path to the option which lists all IPOs in the dropdown list at the bottom of the page.
+    xpath_to_list_all_ipos = "/html/body/main/section[2]/div[2]/div[3]/label/select/option[6]"
+    click_item_at_xpath(chrome_driver=chrome_driver, xpath=xpath_to_list_all_ipos)
+
+
+def click_item_at_xpath(chrome_driver: webdriver.Chrome, xpath: str):
+    """
+    Clicks an item at a given xpath
+    :param chrome_driver: Selenium Chrome WebDriver object that navigates the website
+    :param xpath: path to element in website to click
+    """
+
+    elem = chrome_driver.find_element_by_xpath(xpath=xpath)
     elem.click()
+
+
+def toggle_all_keys_to_true(chrome_driver: webdriver.Chrome,
+                            is_default_layout: bool):
+    """
+    Toggles all keys to true for the IPO guide website
+    :param chrome_driver: Selenium Chrome WebDriver object that navigates the website
+    :param is_default_layout: bool if page is the default configuration, otherwise function will assume all fields are
+                              deselected.
+    """
+
+    default_layout_headers = ["Bolag", "Datum", "Lista", "Rådgivare", "Flaggor", "Erbjudande", "Utveckling"]
+
+    toggle_table_path = "/html/body/main/section[2]/div[1]"
+    soup = bs4.BeautifulSoup(chrome_driver.page_source, "html.parser")
+    toggle_table = soup.find(class_="table-column-toggles js-table-column-toggles")
+    toggle_columns = toggle_table.find_all(class_="table-column-toggles__column")
+    for column_ind, toggle_column in enumerate(toggle_columns):
+        toggle_column_path = toggle_table_path + f"/div[{column_ind + 1}]"
+        toggle_cells = toggle_column.find_all(class_="table-column-toggles-list__item")
+        for cell_ind, toggle_cell in enumerate(toggle_cells):
+            label = toggle_cell.get_text()
+            label = label.replace("\n", "")
+            if is_default_layout:
+                if label in default_layout_headers:
+                    continue
+                else:
+                    toggle_cell_path = toggle_column_path + f"/ul/li[{cell_ind + 1}]/input"
+                    click_item_at_xpath(chrome_driver=chrome_driver, xpath=toggle_cell_path)
+                    print(f"Clicked {label}")
+                    time.sleep(1)
 
 
 def get_ipo_table(driver: webdriver.Chrome,

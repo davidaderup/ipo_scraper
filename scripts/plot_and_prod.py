@@ -9,7 +9,7 @@ import plotly.express as px
 
 import ipo_scraper.visualization as viz
 
-csv_file_path = Path(r"C:\ipo\test.csv")
+csv_file_path = Path(r"C:\ipo\test2.csv")
 
 dataframe = pd.read_csv(csv_file_path)
 
@@ -27,6 +27,11 @@ viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="
 viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="Erbjudande")
 viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="Utveckling", n_bins=100)
 
-viz.plot_scatter_for_columns(dataframe=finished_ipos_dataframe, column_header_x="Flaggor", column_header_y="Utveckling")
+viz.plot_violin_for_columns(dataframe=finished_ipos_dataframe, column_header_x="Flaggor", column_header_y="Utveckling")
+viz.plot_scatter_for_columns(dataframe=finished_ipos_dataframe, column_header_x="Erbjudande", column_header_y="Utveckling")
 
 
+viz.plot_correlation_coefficients(dataframe=finished_ipos_dataframe,
+                                  correlate_to_column="Utveckling",
+                                  columns_to_check=["Flaggor", "Erbjudande"],
+                                  binary_correlation=False)
