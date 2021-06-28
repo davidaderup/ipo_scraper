@@ -76,7 +76,7 @@ def to_signed_float(value: str) -> float:
     :return: value converted to signed float
     """
     # Removes all non digit chars except for - sign
-    value = "".join([char for char in value if char.isdigit() or char == "-"])
+    value = "".join([char for char in value if char.isdigit() or char in ["-", "."]])
     float_value = float(value)
     return float_value
 

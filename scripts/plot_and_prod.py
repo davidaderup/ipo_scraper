@@ -5,9 +5,10 @@ Script for plotting the latest and greatest findings from the IPO data.
 from pathlib import Path
 
 import pandas as pd
-import plotly.express as px
 
 import ipo_scraper.visualization as viz
+
+import ipo_scraper.dataframe_keys as dfk
 
 csv_file_path = Path(r"C:\ipo\test2.csv")
 
@@ -15,23 +16,42 @@ dataframe = pd.read_csv(csv_file_path)
 
 print(dataframe)
 
-finished_ipos_dataframe = dataframe[dataframe["Utveckling"] != "-"]
+
+# Filter out missing entries
+finished_ipos_dataframe = dataframe[dataframe[dfk.OUTCOME_TO_DATE] != "-"]
+finished_ipos_dataframe = finished_ipos_dataframe[finished_ipos_dataframe[dfk.OUTCOME_FIRST_DAY] != "-"]
+finished_ipos_dataframe = finished_ipos_dataframe[finished_ipos_dataframe[dfk.KEY_PERSON_STAKE] != "Uppgift saknas"]
 
 print(finished_ipos_dataframe)
 
-viz.cast_column_to_signed_float(dataframe=finished_ipos_dataframe, column_header="Flaggor")
-viz.cast_column_to_signed_float(dataframe=finished_ipos_dataframe, column_header="Erbjudande")
-viz.cast_column_to_signed_float(dataframe=finished_ipos_dataframe, column_header="Utveckling")
+columns_to_cast = [dfk.N_FLAGS,
+                   dfk.TOTAL_OFFER,
+                   dfk.OUTCOME_TO_DATE,
+                   dfk.OUTCOME_FIRST_DAY,
+                   dfk.NEW_ISSUE_PART,
+                   dfk.SECURED_STAKE,
+                   dfk.KEY_PERSON_STAKE,
+                   dfk.STOCK_PRICE_OFFER]
+for column_header in columns_to_cast:
+    viz.cast_column_to_signed_float(dataframe=finished_ipos_dataframe, column_header=column_header)
 
-viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="Flaggor")
-viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="Erbjudande")
-viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header="Utveckling", n_bins=100)
 
-viz.plot_violin_for_columns(dataframe=finished_ipos_dataframe, column_header_x="Flaggor", column_header_y="Utveckling")
-viz.plot_scatter_for_columns(dataframe=finished_ipos_dataframe, column_header_x="Erbjudande", column_header_y="Utveckling")
+# viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header=dfk.N_FLAGS)
+# viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header=dfk.TOTAL_OFFER)
+# viz.plot_histogram_for_column(dataframe=finished_ipos_dataframe, column_header=dfk.OUTCOME_TO_DATE, n_bins=100)
 
 
-viz.plot_correlation_coefficients(dataframe=finished_ipos_dataframe,
-                                  correlate_to_column="Utveckling",
-                                  columns_to_check=["Flaggor", "Erbjudande"],
-                                  binary_correlation=False)
+viz.plot_scatter_for_columns(dataframe=finished_ipos_dataframe, column_header_x=dfk.STOCK_PRICE_OFFER, column_header_y=dfk.OUTCOME_FIRST_DAY)
+viz.plot_scatter_for_columns(dataframe=finished_ipos_dataframe, column_header_x=dfk.STOCK_PRICE_OFFER, column_header_y=dfk.OUTCOME_TO_DATE)
+
+
+
+# viz.plot_box_for_columns(dataframe=finished_ipos_dataframe, column_header_x=dfk.N_FLAGS, column_header_y=dfk.OUTCOME_TO_DATE)
+# viz.plot_box_for_columns(dataframe=finished_ipos_dataframe, column_header_x=dfk.N_FLAGS, column_header_y=dfk.OUTCOME_FIRST_DAY)
+#
+#
+# viz.plot_correlation_coefficients(dataframe=finished_ipos_dataframe,
+#                                   correlate_to_column=dfk.N_FLAGS,
+#                                   columns_to_check=[dfk.OUTCOME_TO_DATE, dfk.OUTCOME_FIRST_DAY],
+#                                   binary_correlation=False)
+
