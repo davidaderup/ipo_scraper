@@ -6,8 +6,11 @@ from typing import List, Dict
 import time
 
 from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
 import bs4
+import numpy as np
 
+import ipo_scraper.dataframe_keys as dfk
 
 def get_chrome_driver_for_url(url: str) -> webdriver.Chrome:
     """
@@ -27,7 +30,7 @@ def remove_ad(chrome_driver: webdriver.Chrome):
     """
     # this xpath is hardcoded to the button with text "STÄNG X" for the ad that I encountered when making this,
     # It is a google generated ad so it might be subject to change.
-    xpath_to_close_ad = "/html/body/div[5]/div/div/div/button"
+    xpath_to_close_ad = "/html/body/div[8]/div/div/button"
     click_item_at_xpath(chrome_driver=chrome_driver, xpath=xpath_to_close_ad)
 
 
@@ -61,7 +64,13 @@ def toggle_all_keys_to_true(chrome_driver: webdriver.Chrome,
                               deselected.
     """
 
-    default_layout_headers = ["Bolag", "Datum", "Lista", "Rådgivare", "Flaggor", "Erbjudande", "Utveckling"]
+    default_layout_headers = [dfk.CORPORATION,
+                              dfk.DATE,
+                              dfk.MARKET,
+                              dfk.ADVISOR,
+                              dfk.N_FLAGS,
+                              dfk.TOTAL_OFFER,
+                              dfk.OUTCOME_TO_DATE]
 
     toggle_table_path = "/html/body/main/section[2]/div[1]"
     soup = bs4.BeautifulSoup(chrome_driver.page_source, "html.parser")
@@ -85,6 +94,12 @@ def toggle_all_keys_to_true(chrome_driver: webdriver.Chrome,
 
 def get_ipo_table(driver: webdriver.Chrome,
                   id: str = "datatable_overview") -> bs4.Tag:
+    """
+    Retrieves a Tag object with the IPO table content.
+    :param driver: Selenium Chrome WebDriver object that navigates the website
+    :param id: ID for IPO datatable
+    :return:
+    """
 
     soup = bs4.BeautifulSoup(driver.page_source, "html.parser")
 
@@ -132,9 +147,33 @@ def extract_table_body_to_dict(table: bs4.Tag,
     return df_dict
 
 
+def get_flag_dict(chrome_driver: webdriver.Chrome,
+                  table: bs4.Tag,
+                  flag_column_ind: int) -> Dict[str, np.ndarray]:
+    flag_dict = {}
 
-
-
-
-
-
+    body = table.find("tbody")
+    table_rows = body.find_all("tr")
+    n_ipos = len(table_rows)
+    for row_ind, table_row in enumerate(table_rows):
+        table_cells = table_row.find_all("td")
+        flag_url = table_cells[flag_column_ind].a["href"]
+        # Open tab
+        chrome_driver.find_element_by_tag_name('body').send_keys(Keys.COMMAND + 't')
+        chrome_driver.execute_script(f'''window.open("{flag_url}","_blank");''')
+        # Scroll to get rid of annoying dynamic ad
+        chrome_driver.execute_script(f"window.scrollTo(0, {1080})")
+        chrome_driver.switch_to.window(chrome_driver.window_handles[1])
+        soup = bs4.BeautifulSoup(chrome_driver.page_source, "html.parser")
+        flags_pane = soup.find(class_="accordion accordion--small-font")
+        flags_list = flags_pane.find_all("li")
+        for flags_list_item in flags_list:
+            flag_name = flags_list_item.find(class_="accordion-trigger js-accordion-trigger").get_text()
+            flag_name = flag_name.strip()
+            print(flag_name)
+            if flag_name not in flag_dict.keys():
+                flag_dict[flag_name] = np.zeros(n_ipos)
+            flag_dict[flag_name][row_ind] = 1
+        chrome_driver.close()
+        chrome_driver.switch_to.window(chrome_driver.window_handles[0])
+    return flag_dict
